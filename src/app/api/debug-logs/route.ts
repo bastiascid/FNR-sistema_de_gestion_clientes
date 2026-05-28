@@ -5,10 +5,11 @@ import os from 'os';
 
 export async function GET() {
   try {
+    const platform = os.platform();
     let appDataPath = '';
-    if (process.platform === 'win32') {
+    if (platform === 'win32') {
       appDataPath = process.env.APPDATA || '';
-    } else if (process.platform === 'darwin') {
+    } else if (platform === 'darwin') {
       appDataPath = path.join(os.homedir(), 'Library', 'Application Support');
     } else {
       appDataPath = path.join(os.homedir(), '.config');

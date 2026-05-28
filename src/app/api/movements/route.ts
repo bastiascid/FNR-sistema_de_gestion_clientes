@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
@@ -36,8 +36,8 @@ export async function GET(request: Request) {
 
     query += ' ORDER BY m.fecha DESC, m.id DESC';
 
-    const stmt = db.prepare(query);
-    const movements = stmt.all(...params);
+    const db = await getDb();
+    const movements = await db.all(query, ...params);
 
     return NextResponse.json(movements);
   } catch (error: any) {
@@ -58,20 +58,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const db = await getDb();
+    
     // Verify client exists
-    const clientExists = db.prepare('SELECT 1 FROM clientes WHERE id = ?').get(id_cliente);
+    const clientExists = await db.get('SELECT 1 FROM clientes WHERE id = ?', id_cliente);
     if (!clientExists) {
       return NextResponse.json({ error: 'El cliente especificado no existe.' }, { status: 404 });
     }
 
-    const stmt = db.prepare(`
-      INSERT INTO movimientos (id_cliente, fecha, detalle, banco, boleta, credito, abono)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(
+    const result = await db.run(
+      `INSERT INTO movimientos (id_cliente, fecha, detalle, banco, boleta, credito, abono)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       id_cliente,
-      fecha, // Must be YYYY-MM-DD
+      fecha,
       detalle,
       banco || null,
       boleta || null,
@@ -79,12 +78,12 @@ export async function POST(request: Request) {
       Number(abono || 0)
     );
 
-    const newMovement = db.prepare(`
+    const newMovement = await db.get(`
       SELECT m.*, c.nombre AS cliente_nombre
       FROM movimientos m
       JOIN clientes c ON m.id_cliente = c.id
       WHERE m.id = ?
-    `).get(result.lastInsertRowid);
+    `, result.lastID);
 
     return NextResponse.json(newMovement, { status: 201 });
   } catch (error: any) {

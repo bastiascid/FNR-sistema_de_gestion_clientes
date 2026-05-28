@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function PUT(
   request: Request,
@@ -17,13 +17,11 @@ export async function PUT(
       );
     }
 
-    const stmt = db.prepare(`
-      UPDATE movimientos
-      SET fecha = ?, detalle = ?, banco = ?, boleta = ?, credito = ?, abono = ?
-      WHERE id = ?
-    `);
-
-    const result = stmt.run(
+    const db = await getDb();
+    const result = await db.run(
+      `UPDATE movimientos
+       SET fecha = ?, detalle = ?, banco = ?, boleta = ?, credito = ?, abono = ?
+       WHERE id = ?`,
       fecha,
       detalle,
       banco || null,
@@ -37,12 +35,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Movimiento no encontrado' }, { status: 404 });
     }
 
-    const updatedMovement = db.prepare(`
+    const updatedMovement = await db.get(`
       SELECT m.*, c.nombre AS cliente_nombre
       FROM movimientos m
       JOIN clientes c ON m.id_cliente = c.id
       WHERE m.id = ?
-    `).get(id);
+    `, id);
 
     return NextResponse.json(updatedMovement);
   } catch (error: any) {
@@ -57,8 +55,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-
-    const result = db.prepare('DELETE FROM movimientos WHERE id = ?').run(id);
+    const db = await getDb();
+    const result = await db.run('DELETE FROM movimientos WHERE id = ?', id);
 
     if (result.changes === 0) {
       return NextResponse.json({ error: 'Movimiento no encontrado' }, { status: 404 });

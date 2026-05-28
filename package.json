@@ -9,19 +9,19 @@
     "start": "next start",
     "lint": "eslint",
     "electron": "electron .",
-    "dist:win": "npm rebuild better-sqlite3 && npm run build && electron-builder --win --x64"
+    "dist:win": "npm install sqlite3 --force && npm run build && electron-builder --win --x64"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -50,6 +50,6 @@
       "target": "portable",
       "icon": "public/favicon.ico"
     },
-    "asar": true
+    "asar": false
   }
 }

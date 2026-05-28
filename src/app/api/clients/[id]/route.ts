@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function GET(
   request: Request,
@@ -7,7 +7,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const client = db.prepare('SELECT * FROM clientes WHERE id = ?').get(id);
+    const db = await getDb();
+    const client = await db.get('SELECT * FROM clientes WHERE id = ?', id);
 
     if (!client) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
@@ -33,13 +34,11 @@ export async function PUT(
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
     }
 
-    const stmt = db.prepare(`
-      UPDATE clientes
-      SET nombre = ?, rut = ?, telefono = ?, correo = ?, direccion = ?, observaciones = ?
-      WHERE id = ?
-    `);
-
-    const result = stmt.run(
+    const db = await getDb();
+    const result = await db.run(
+      `UPDATE clientes
+       SET nombre = ?, rut = ?, telefono = ?, correo = ?, direccion = ?, observaciones = ?
+       WHERE id = ?`,
       nombre,
       rut || null,
       telefono || null,
@@ -53,7 +52,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
 
-    const updatedClient = db.prepare('SELECT * FROM clientes WHERE id = ?').get(id);
+    const updatedClient = await db.get('SELECT * FROM clientes WHERE id = ?', id);
     return NextResponse.json(updatedClient);
   } catch (error: any) {
     console.error('Error updating client:', error);
@@ -67,8 +66,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-
-    const result = db.prepare('DELETE FROM clientes WHERE id = ?').run(id);
+    const db = await getDb();
+    const result = await db.run('DELETE FROM clientes WHERE id = ?', id);
 
     if (result.changes === 0) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });

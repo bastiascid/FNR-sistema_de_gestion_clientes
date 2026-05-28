@@ -73,16 +73,18 @@ function createWindow() {
 }
 
 function startNextServer() {
-  console.log('Starting background Next.js server...');
+  console.log('Starting background Next.js server using embedded node runtime...');
   
   const nextBin = path.resolve(__dirname, 'node_modules/next/dist/bin/next');
   
-  // Spawn Next.js production server with the persistent SQLite environment variable
-  nextProcess = spawn('node', [nextBin, 'start', '-p', String(PORT)], {
+  // Spawn Next.js server using Electron's own executable in Node.js mode.
+  // This removes any dependency on a global Node.js installation!
+  nextProcess = spawn(process.execPath, [nextBin, 'start', '-p', String(PORT)], {
     cwd: __dirname,
     env: { 
       ...process.env, 
       NODE_ENV: 'production',
+      ELECTRON_RUN_AS_NODE: '1',
       FNR_DB_PATH: destDbPath
     }
   });

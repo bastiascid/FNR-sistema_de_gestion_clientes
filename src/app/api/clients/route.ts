@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
@@ -27,8 +27,8 @@ export async function GET(request: Request) {
       ORDER BY c.nombre ASC
     `;
 
-    const stmt = db.prepare(query);
-    const clients = stmt.all(...params);
+    const db = await getDb();
+    const clients = await db.all(query, ...params);
 
     return NextResponse.json(clients);
   } catch (error: any) {
@@ -46,12 +46,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
     }
 
-    const stmt = db.prepare(`
-      INSERT INTO clientes (nombre, rut, telefono, correo, direccion, observaciones)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(
+    const db = await getDb();
+    const result = await db.run(
+      `INSERT INTO clientes (nombre, rut, telefono, correo, direccion, observaciones)
+       VALUES (?, ?, ?, ?, ?, ?)`,
       nombre,
       rut || null,
       telefono || null,
@@ -60,7 +58,7 @@ export async function POST(request: Request) {
       observaciones || null
     );
 
-    const newClient = db.prepare('SELECT * FROM clientes WHERE id = ?').get(result.lastInsertRowid);
+    const newClient = await db.get('SELECT * FROM clientes WHERE id = ?', result.lastID);
 
     return NextResponse.json(newClient, { status: 201 });
   } catch (error: any) {

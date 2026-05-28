@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
@@ -10,18 +10,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'ID de cliente es requerido.' }, { status: 400 });
     }
 
+    const db = await getDb();
+
     // 1. Fetch client info
-    const client = db.prepare('SELECT * FROM clientes WHERE id = ?').get(clientId);
+    const client = await db.get('SELECT * FROM clientes WHERE id = ?', clientId);
     if (!client) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
 
-    // 2. Fetch all movements chronologically (ordered by date ascending, then ID ascending)
-    const movements = db.prepare(`
+    // 2. Fetch all movements chronologically
+    const movements = await db.all(`
       SELECT * FROM movimientos
       WHERE id_cliente = ?
       ORDER BY fecha ASC, id ASC
-    `).all(clientId) as any[];
+    `, clientId) as any[];
 
     // 3. Compute running balance (saldo acumulado) step-by-step
     let runningBalance = 0;

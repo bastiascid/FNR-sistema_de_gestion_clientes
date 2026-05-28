@@ -15,11 +15,38 @@ const destDbPath = path.join(userDataPath, 'database.sqlite');
 function setupDatabase() {
   console.log('Resolving persistent database path at:', destDbPath);
   
+  // Ensure the parent directory exists
+  if (!fs.existsSync(userDataPath)) {
+    try {
+      fs.mkdirSync(userDataPath, { recursive: true });
+    } catch (err) {
+      console.error('Error creating AppData directory:', err);
+    }
+  }
+  
+  const sourceDbPath = path.resolve(__dirname, 'database.sqlite');
+  let shouldCopy = false;
+  
   if (!fs.existsSync(destDbPath)) {
-    // Look for packaged database file to copy on first execution
-    // When running packaged, files can be in app.asar or resources/app
-    const sourceDbPath = path.resolve(__dirname, 'database.sqlite');
-    
+    console.log('Database does not exist in userData directory. Needs seeding.');
+    shouldCopy = true;
+  } else {
+    try {
+      const destStats = fs.statSync(destDbPath);
+      if (fs.existsSync(sourceDbPath)) {
+        const sourceStats = fs.statSync(sourceDbPath);
+        // If destination is smaller than 25KB and source is larger, it was probably initialized as empty by a failed startup
+        if (destStats.size < 25000 && sourceStats.size >= 50000) {
+          console.log(`Database exists but is empty/unseeded (size: ${destStats.size} bytes). Re-seeding from source (${sourceStats.size} bytes)...`);
+          shouldCopy = true;
+        }
+      }
+    } catch (err) {
+      console.error('Error checking database file sizes:', err);
+    }
+  }
+
+  if (shouldCopy) {
     try {
       if (fs.existsSync(sourceDbPath)) {
         console.log('Seeding database from packaged file:', sourceDbPath);
@@ -32,7 +59,7 @@ function setupDatabase() {
       console.error('Error seeding database file:', err);
     }
   } else {
-    console.log('Database already exists in userData directory. Using existing database.');
+    console.log('Database already exists in userData directory and is populated. Using existing database.');
   }
 }
 

@@ -11,16 +11,39 @@ const PORT = 12026; // Custom port to prevent conflicts with developers running 
 // Determine the writeable database path in user data folder
 const userDataPath = app.getPath('userData');
 const destDbPath = path.join(userDataPath, 'database.sqlite');
+const logFilePath = path.join(userDataPath, 'app.log');
+
+// Initialize a fresh log file on startup
+try {
+  if (!fs.existsSync(userDataPath)) {
+    fs.mkdirSync(userDataPath, { recursive: true });
+  }
+  if (fs.existsSync(logFilePath)) {
+    fs.unlinkSync(logFilePath);
+  }
+} catch (e) {
+  console.error('Failed to initialize log file:', e);
+}
+
+function logToFile(message) {
+  try {
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logFilePath, `[${timestamp}] ${message}\n`);
+  } catch (err) {
+    console.error('Failed to write to log file:', err);
+  }
+}
 
 function setupDatabase() {
-  console.log('Resolving persistent database path at:', destDbPath);
+  logToFile(`Resolving persistent database path at: ${destDbPath}`);
   
   // Ensure the parent directory exists
   if (!fs.existsSync(userDataPath)) {
     try {
       fs.mkdirSync(userDataPath, { recursive: true });
+      logToFile('Created AppData directory.');
     } catch (err) {
-      console.error('Error creating AppData directory:', err);
+      logToFile(`Error creating AppData directory: ${err.message}`);
     }
   }
   
@@ -28,38 +51,41 @@ function setupDatabase() {
   let shouldCopy = false;
   
   if (!fs.existsSync(destDbPath)) {
-    console.log('Database does not exist in userData directory. Needs seeding.');
+    logToFile('Database does not exist in userData directory. Needs seeding.');
     shouldCopy = true;
   } else {
     try {
       const destStats = fs.statSync(destDbPath);
       if (fs.existsSync(sourceDbPath)) {
         const sourceStats = fs.statSync(sourceDbPath);
+        logToFile(`Database file sizes: destination=${destStats.size} bytes, source=${sourceStats.size} bytes`);
         // If destination is smaller than 25KB and source is larger, it was probably initialized as empty by a failed startup
         if (destStats.size < 25000 && sourceStats.size >= 50000) {
-          console.log(`Database exists but is empty/unseeded (size: ${destStats.size} bytes). Re-seeding from source (${sourceStats.size} bytes)...`);
+          logToFile(`Database exists but is empty/unseeded (size: ${destStats.size} bytes). Re-seeding from source (${sourceStats.size} bytes)...`);
           shouldCopy = true;
         }
+      } else {
+        logToFile(`Warning: Source database file not found at: ${sourceDbPath}`);
       }
     } catch (err) {
-      console.error('Error checking database file sizes:', err);
+      logToFile(`Error checking database file sizes: ${err.message}`);
     }
   }
 
   if (shouldCopy) {
     try {
       if (fs.existsSync(sourceDbPath)) {
-        console.log('Seeding database from packaged file:', sourceDbPath);
+        logToFile(`Seeding database from packaged file: ${sourceDbPath}`);
         fs.copyFileSync(sourceDbPath, destDbPath);
-        console.log('Database successfully seeded to:', destDbPath);
+        logToFile(`Database successfully seeded to: ${destDbPath}`);
       } else {
-        console.log('Warning: No packaged database.sqlite found at root. Schema will be initialized fresh.');
+        logToFile('Warning: No packaged database.sqlite found at root. Schema will be initialized fresh.');
       }
     } catch (err) {
-      console.error('Error seeding database file:', err);
+      logToFile(`Error seeding database file: ${err.message}`);
     }
   } else {
-    console.log('Database already exists in userData directory and is populated. Using existing database.');
+    logToFile('Database already exists in userData directory and is populated. Using existing database.');
   }
 }
 
@@ -117,15 +143,21 @@ function startNextServer() {
   });
 
   nextProcess.stdout.on('data', (data) => {
-    console.log(`[Next.js stdout]: ${data}`);
+    const message = `[Next.js stdout]: ${data.toString().trim()}`;
+    console.log(message);
+    logToFile(message);
   });
 
   nextProcess.stderr.on('data', (data) => {
-    console.error(`[Next.js stderr]: ${data}`);
+    const message = `[Next.js stderr]: ${data.toString().trim()}`;
+    console.error(message);
+    logToFile(message);
   });
 
   nextProcess.on('close', (code) => {
-    console.log(`Next.js server exited with code ${code}`);
+    const message = `Next.js server exited with code ${code}`;
+    console.log(message);
+    logToFile(message);
   });
 }
 

@@ -42,6 +42,9 @@ export async function getDb(): Promise<SqliteDatabase> {
         );
       `);
       return db;
+    }).catch((err) => {
+      dbPromise = null; // Reset promise so subsequent requests can try to reconnect
+      throw err;
     });
   }
   return dbPromise;

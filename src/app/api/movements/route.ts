@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
@@ -8,38 +8,34 @@ export async function GET(request: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    let query = `
-      SELECT m.*, c.nombre AS cliente_nombre
-      FROM movimientos m
-      JOIN clientes c ON m.id_cliente = c.id
-    `;
-
-    const whereClauses: string[] = [];
-    const params: any[] = [];
+    const supabase = await getSupabaseServer();
+    let query = supabase.from('movimientos').select('*, clientes (nombre)');
 
     if (clientId) {
-      whereClauses.push('m.id_cliente = ?');
-      params.push(parseInt(clientId));
+      query = query.eq('id_cliente', parseInt(clientId));
     }
     if (startDate) {
-      whereClauses.push('m.fecha >= ?');
-      params.push(startDate);
+      query = query.gte('fecha', startDate);
     }
     if (endDate) {
-      whereClauses.push('m.fecha <= ?');
-      params.push(endDate);
+      query = query.lte('fecha', endDate);
     }
 
-    if (whereClauses.length > 0) {
-      query += ' WHERE ' + whereClauses.join(' AND ');
+    const { data: movements, error } = await query
+      .order('fecha', { ascending: false })
+      .order('id', { ascending: false });
+
+    if (error) {
+      throw error;
     }
 
-    query += ' ORDER BY m.fecha DESC, m.id DESC';
+    const formattedMovements = (movements || []).map((m: any) => ({
+      ...m,
+      cliente_nombre: m.clientes ? m.clientes.nombre : null,
+      clientes: undefined
+    }));
 
-    const db = await getDb();
-    const movements = await db.all(query, ...params);
-
-    return NextResponse.json(movements);
+    return NextResponse.json(formattedMovements);
   } catch (error: any) {
     console.error('Error fetching movements:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -58,34 +54,44 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = await getDb();
+    const supabase = await getSupabaseServer();
     
     // Verify client exists
-    const clientExists = await db.get('SELECT 1 FROM clientes WHERE id = ?', id_cliente);
-    if (!clientExists) {
+    const { data: client, error: clientError } = await supabase
+      .from('clientes')
+      .select('id')
+      .eq('id', id_cliente)
+      .single();
+
+    if (clientError || !client) {
       return NextResponse.json({ error: 'El cliente especificado no existe.' }, { status: 404 });
     }
 
-    const result = await db.run(
-      `INSERT INTO movimientos (id_cliente, fecha, detalle, banco, boleta, credito, abono)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      id_cliente,
-      fecha,
-      detalle,
-      banco || null,
-      boleta || null,
-      Number(credito || 0),
-      Number(abono || 0)
-    );
+    const { data: newMovement, error: insertError } = await supabase
+      .from('movimientos')
+      .insert({
+        id_cliente,
+        fecha,
+        detalle,
+        banco: banco || null,
+        boleta: boleta || null,
+        credito: Number(credito || 0),
+        abono: Number(abono || 0)
+      })
+      .select('*, clientes (nombre)')
+      .single();
 
-    const newMovement = await db.get(`
-      SELECT m.*, c.nombre AS cliente_nombre
-      FROM movimientos m
-      JOIN clientes c ON m.id_cliente = c.id
-      WHERE m.id = ?
-    `, result.lastID);
+    if (insertError) {
+      throw insertError;
+    }
 
-    return NextResponse.json(newMovement, { status: 201 });
+    const formattedMovement = {
+      ...newMovement,
+      cliente_nombre: newMovement.clientes ? newMovement.clientes.nombre : null,
+      clientes: undefined
+    };
+
+    return NextResponse.json(formattedMovement, { status: 201 });
   } catch (error: any) {
     console.error('Error creating movement:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

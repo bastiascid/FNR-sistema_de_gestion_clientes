@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
@@ -10,27 +10,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'ID de cliente es requerido.' }, { status: 400 });
     }
 
-    const db = await getDb();
+    const supabase = await getSupabaseServer();
 
     // 1. Fetch client info
-    const client = await db.get('SELECT * FROM clientes WHERE id = ?', clientId);
-    if (!client) {
+    const { data: client, error: clientError } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('id', clientId)
+      .single();
+
+    if (clientError || !client) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
 
     // 2. Fetch all movements chronologically
-    const movements = await db.all(`
-      SELECT * FROM movimientos
-      WHERE id_cliente = ?
-      ORDER BY fecha ASC, id ASC
-    `, clientId) as any[];
+    const { data: movements, error: movementsError } = await supabase
+      .from('movimientos')
+      .select('*')
+      .eq('id_cliente', clientId)
+      .order('fecha', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (movementsError) {
+      throw movementsError;
+    }
 
     // 3. Compute running balance (saldo acumulado) step-by-step
     let runningBalance = 0;
     let totalDebe = 0;
     let totalHaber = 0;
 
-    const movementsWithBalance = movements.map(m => {
+    const movementsWithBalance = (movements || []).map(m => {
       totalDebe += m.credito;
       totalHaber += m.abono;
       runningBalance = runningBalance + m.credito - m.abono;

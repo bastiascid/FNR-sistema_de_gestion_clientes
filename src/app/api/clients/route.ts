@@ -1,34 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
 
-    let query = `
-      SELECT c.*,
-             COALESCE(SUM(m.credito), 0) AS debe,
-             COALESCE(SUM(m.abono), 0) AS haber,
-             COALESCE(SUM(m.credito), 0) - COALESCE(SUM(m.abono), 0) AS saldo
-      FROM clientes c
-      LEFT JOIN movimientos m ON c.id = m.id_cliente
-    `;
-
-    const params: any[] = [];
+    const supabase = await getSupabaseServer();
+    let query = supabase.from('clientes_resumen').select('*');
 
     if (search) {
-      query += ` WHERE c.nombre LIKE ? OR c.rut LIKE ? `;
-      params.push(`%${search}%`, `%${search}%`);
+      query = query.or(`nombre.ilike.%${search}%,rut.ilike.%${search}%`);
     }
 
-    query += `
-      GROUP BY c.id
-      ORDER BY c.nombre ASC
-    `;
+    const { data: clients, error } = await query.order('nombre', { ascending: true });
 
-    const db = await getDb();
-    const clients = await db.all(query, ...params);
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json(clients);
   } catch (error: any) {
@@ -46,19 +35,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
     }
 
-    const db = await getDb();
-    const result = await db.run(
-      `INSERT INTO clientes (nombre, rut, telefono, correo, direccion, observaciones)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      nombre,
-      rut || null,
-      telefono || null,
-      correo || null,
-      direccion || null,
-      observaciones || null
-    );
+    const supabase = await getSupabaseServer();
+    const { data: newClient, error } = await supabase
+      .from('clientes')
+      .insert({
+        nombre,
+        rut: rut || null,
+        telefono: telefono || null,
+        correo: correo || null,
+        direccion: direccion || null,
+        observaciones: observaciones || null
+      })
+      .select()
+      .single();
 
-    const newClient = await db.get('SELECT * FROM clientes WHERE id = ?', result.lastID);
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json(newClient, { status: 201 });
   } catch (error: any) {

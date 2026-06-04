@@ -24,6 +24,7 @@ export default function Layout({ children, title }: LayoutProps) {
     { name: 'Portal Principal', href: '/', icon: LayoutDashboard },
     { name: 'Clientes', href: '/clientes', icon: Users },
     { name: 'Bitácora de Movimientos', href: '/movimientos', icon: ArrowLeftRight },
+    { name: 'Integración SII', href: '/sii', icon: FileSpreadsheet },
   ];
 
   return (

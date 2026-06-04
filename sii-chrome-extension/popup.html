@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      color: #ffffff;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+    .header p {
+      margin: 4px 0 0 0;
+      font-size: 10px;
+      color: #c7d2fe;
+    }
+    .content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+    input {
+      padding: 8px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 13px;
+      background-color: #ffffff;
+      color: #334155;
+      outline: none;
+      transition: all 0.2s;
+    }
+    input:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    button {
+      background-color: #4f46e5;
+      color: #ffffff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    button:hover {
+      background-color: #4338ca;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    .status {
+      font-size: 12px;
+      text-align: center;
+      padding: 8px;
+      border-radius: 6px;
+      display: none;
+    }
+    .status.success {
+      background-color: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      display: block;
+    }
+    .status.error {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>FNR SII INTEGRATION</h1>
+    <p>Enlace con Portal FNR Contable</p>
+  </div>
+  <div class="content">
+    <div id="status-message" class="status"></div>
+    
+    <div class="form-group">
+      <label for="server-url">URL del Servidor</label>
+      <input type="url" id="server-url" placeholder="https://fnr.clubdeleones.cl" value="http://localhost:12026">
+    </div>
+
+    <div class="form-group">
+      <label for="api-key">Clave API SII</label>
+      <input type="password" id="api-key" placeholder="Ingresa tu clave secreta de enlace">
+    </div>
+
+    <button id="save-btn">
+      Guardar Configuración
+    </button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

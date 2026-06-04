@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "FNR SII Integration",
+  "version": "1.0",
+  "description": "Sincroniza automáticamente boletas de honorarios recibidas en el portal del SII con el sistema contable FNR Admin.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.sii.cl/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "128": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.sii.cl/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
 export async function GET(
   request: Request,
@@ -7,10 +7,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const db = await getDb();
-    const client = await db.get('SELECT * FROM clientes WHERE id = ?', id);
+    const supabase = await getSupabaseServer();
+    const { data: client, error } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (!client) {
+    if (error || !client) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
 
@@ -34,25 +38,25 @@ export async function PUT(
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
     }
 
-    const db = await getDb();
-    const result = await db.run(
-      `UPDATE clientes
-       SET nombre = ?, rut = ?, telefono = ?, correo = ?, direccion = ?, observaciones = ?
-       WHERE id = ?`,
-      nombre,
-      rut || null,
-      telefono || null,
-      correo || null,
-      direccion || null,
-      observaciones || null,
-      id
-    );
+    const supabase = await getSupabaseServer();
+    const { data: updatedClient, error } = await supabase
+      .from('clientes')
+      .update({
+        nombre,
+        rut: rut || null,
+        telefono: telefono || null,
+        correo: correo || null,
+        direccion: direccion || null,
+        observaciones: observaciones || null
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    if (result.changes === 0) {
+    if (error || !updatedClient) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
 
-    const updatedClient = await db.get('SELECT * FROM clientes WHERE id = ?', id);
     return NextResponse.json(updatedClient);
   } catch (error: any) {
     console.error('Error updating client:', error);
@@ -66,11 +70,14 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const db = await getDb();
-    const result = await db.run('DELETE FROM clientes WHERE id = ?', id);
+    const supabase = await getSupabaseServer();
+    const { error, count } = await supabase
+      .from('clientes')
+      .delete({ count: 'planned' })
+      .eq('id', id);
 
-    if (result.changes === 0) {
-      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+    if (error) {
+      throw error;
     }
 
     return NextResponse.json({ success: true, message: 'Cliente eliminado correctamente' });

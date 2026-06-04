@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
 export async function PUT(
   request: Request,
@@ -17,32 +17,32 @@ export async function PUT(
       );
     }
 
-    const db = await getDb();
-    const result = await db.run(
-      `UPDATE movimientos
-       SET fecha = ?, detalle = ?, banco = ?, boleta = ?, credito = ?, abono = ?
-       WHERE id = ?`,
-      fecha,
-      detalle,
-      banco || null,
-      boleta || null,
-      Number(credito || 0),
-      Number(abono || 0),
-      id
-    );
+    const supabase = await getSupabaseServer();
+    const { data: updatedMovement, error } = await supabase
+      .from('movimientos')
+      .update({
+        fecha,
+        detalle,
+        banco: banco || null,
+        boleta: boleta || null,
+        credito: Number(credito || 0),
+        abono: Number(abono || 0)
+      })
+      .eq('id', id)
+      .select('*, clientes (nombre)')
+      .single();
 
-    if (result.changes === 0) {
+    if (error || !updatedMovement) {
       return NextResponse.json({ error: 'Movimiento no encontrado' }, { status: 404 });
     }
 
-    const updatedMovement = await db.get(`
-      SELECT m.*, c.nombre AS cliente_nombre
-      FROM movimientos m
-      JOIN clientes c ON m.id_cliente = c.id
-      WHERE m.id = ?
-    `, id);
+    const formattedMovement = {
+      ...updatedMovement,
+      cliente_nombre: updatedMovement.clientes ? updatedMovement.clientes.nombre : null,
+      clientes: undefined
+    };
 
-    return NextResponse.json(updatedMovement);
+    return NextResponse.json(formattedMovement);
   } catch (error: any) {
     console.error('Error updating movement:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -55,11 +55,14 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const db = await getDb();
-    const result = await db.run('DELETE FROM movimientos WHERE id = ?', id);
+    const supabase = await getSupabaseServer();
+    const { error } = await supabase
+      .from('movimientos')
+      .delete()
+      .eq('id', id);
 
-    if (result.changes === 0) {
-      return NextResponse.json({ error: 'Movimiento no encontrado' }, { status: 404 });
+    if (error) {
+      throw error;
     }
 
     return NextResponse.json({ success: true, message: 'Movimiento eliminado correctamente' });

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 320px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      width: 340px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
       padding: 0;
       background-color: #f8fafc;
@@ -14,44 +14,74 @@
     .header {
       background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
       color: #ffffff;
-      padding: 16px;
+      padding: 14px;
       text-align: center;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      position: relative;
     }
     .header h1 {
       margin: 0;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       letter-spacing: 0.05em;
     }
     .header p {
-      margin: 4px 0 0 0;
+      margin: 3px 0 0 0;
       font-size: 10px;
       color: #c7d2fe;
     }
-    .content {
+    .tabs-nav {
+      display: flex;
+      background-color: #e2e8f0;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      color: #4f46e5;
+      background-color: #ffffff;
+      border-bottom: 2px solid #4f46e5;
+    }
+    .panel {
       padding: 16px;
+      display: none;
+    }
+    .panel.active {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
+    }
+    .form-row {
+      display: flex;
+      gap: 10px;
     }
     label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       color: #64748b;
       text-transform: uppercase;
       letter-spacing: 0.025em;
     }
-    input {
-      padding: 8px 12px;
+    input, select {
+      padding: 8px 10px;
       border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 13px;
+      border-radius: 6px;
+      font-size: 12.5px;
       background-color: #ffffff;
       color: #334155;
       outline: none;
@@ -61,34 +91,37 @@
       border-color: #4f46e5;
       box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
-    button {
+    button.action-btn {
       background-color: #4f46e5;
       color: #ffffff;
       border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
+      padding: 10px;
+      border-radius: 6px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      margin-top: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
+      margin-top: 6px;
     }
-    button:hover {
+    button.action-btn:hover {
       background-color: #4338ca;
     }
-    button:active {
-      transform: scale(0.98);
+    button.action-btn:disabled {
+      background-color: #cbd5e1;
+      color: #94a3b8;
+      cursor: not-allowed;
     }
     .status {
-      font-size: 12px;
+      font-size: 11px;
       text-align: center;
       padding: 8px;
       border-radius: 6px;
       display: none;
+      font-weight: 600;
     }
     .status.success {
       background-color: #ecfdf5;
@@ -102,6 +135,22 @@
       border: 1px solid #fecaca;
       display: block;
     }
+    .status.info {
+      background-color: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+      display: block;
+    }
+    .info-box {
+      background-color: #f0fdf4;
+      border: 1px dashed #bbf7d0;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: #166534;
+      text-align: center;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
@@ -109,22 +158,78 @@
     <h1>FNR SII INTEGRATION</h1>
     <p>Enlace con Portal FNR Contable</p>
   </div>
+  
+  <div class="tabs-nav" id="tabs-navigation">
+    <button class="tab-btn active" id="tab-sync-btn">Sincronizar</button>
+    <button class="tab-btn" id="tab-config-btn">Configurar</button>
+  </div>
+
   <div class="content">
-    <div id="status-message" class="status"></div>
     
-    <div class="form-group">
-      <label for="server-url">URL del Servidor</label>
-      <input type="url" id="server-url" placeholder="https://fnr.clubdeleones.cl" value="http://localhost:12026">
+    <!-- Sync Panel -->
+    <div class="panel active" id="panel-sync">
+      <div id="sync-status" class="status"></div>
+      
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label for="sync-boleta">N° Boleta</label>
+          <input type="text" id="sync-boleta" placeholder="Ej: 1234">
+        </div>
+        <div style="flex: 1.5;" class="form-group">
+          <label for="sync-rut">RUT Emisor</label>
+          <input type="text" id="sync-rut" placeholder="Ej: 12.345.678-9">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="sync-nombre">Nombre Emisor</label>
+        <input type="text" id="sync-nombre" placeholder="Ej: JUAN PEREZ PEREZ">
+      </div>
+
+      <div class="form-row">
+        <div style="flex: 1;" class="form-group">
+          <label for="sync-fecha">Fecha</label>
+          <input type="date" id="sync-fecha">
+        </div>
+        <div style="flex: 1;" class="form-group">
+          <label for="sync-monto">Monto Bruto ($)</label>
+          <input type="number" id="sync-monto" placeholder="Ej: 75000">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="sync-detalle">Concepto / Detalle</label>
+        <input type="text" id="sync-detalle" placeholder="Ej: Honorarios mes de Enero 2026">
+      </div>
+
+      <button class="action-btn" id="btn-sync-send">
+        Registrar en FNR
+      </button>
     </div>
 
-    <div class="form-group">
-      <label for="api-key">Clave API SII</label>
-      <input type="password" id="api-key" placeholder="Ingresa tu clave secreta de enlace">
+    <!-- Configuration Panel -->
+    <div class="panel" id="panel-config">
+      <div id="config-status" class="status"></div>
+      
+      <div class="form-group">
+        <label for="config-url">URL del Servidor FNR</label>
+        <input type="url" id="config-url" placeholder="https://fnr.clubdeleonesmachali.cl">
+      </div>
+
+      <div class="form-group">
+        <label for="config-key">Clave API SII</label>
+        <input type="password" id="config-key" placeholder="Ingresa tu clave secreta de enlace">
+      </div>
+
+      <button class="action-btn" id="btn-config-save">
+        Guardar Configuración
+      </button>
+      
+      <div class="info-box" style="margin-top: 10px;">
+        Obtén estas credenciales en tu panel administrativo en la sección de <strong>"Integración SII"</strong>.
+      </div>
     </div>
 
-    <button id="save-btn">
-      Guardar Configuración
-    </button>
   </div>
   <script src="popup.js"></script>
 </body>

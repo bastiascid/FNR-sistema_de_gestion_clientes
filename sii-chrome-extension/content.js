@@ -3,11 +3,14 @@
 (function() {
   // Check if we are in a BHE page or document
   const bodyText = document.body.innerText || '';
-  const isBhe = bodyText.includes('Boleta de Honorarios Electrónica') || 
-                bodyText.includes('BOLETA DE HONORARIOS ELECTRONICA') ||
-                bodyText.includes('Boleta de Honorarios') ||
+  const isBhe = bodyText.includes('Boleta') || 
+                bodyText.includes('BOLETA') ||
+                bodyText.includes('Honorarios') ||
+                bodyText.includes('HONORARIOS') ||
                 window.location.href.includes('BHE_Visualizador') ||
-                window.location.href.includes('ctor_boletas');
+                window.location.href.includes('ctor_boletas') ||
+                window.location.href.includes('BHE') ||
+                window.location.href.includes('bhe');
 
   if (!isBhe) return;
 
@@ -19,6 +22,16 @@
   // Ingest floating button in the page
   injectFloatingButton(parsedData);
 })();
+
+// Listen for messages from the popup (fallback trigger)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'scrape') {
+    const text = document.body.innerText || '';
+    const scraped = scrapeBheData(text);
+    sendResponse({ data: scraped });
+  }
+  return true;
+});
 
 // Helper to scrape BHE data using regex
 function scrapeBheData(text) {

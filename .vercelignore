@@ -1,0 +1,8 @@
+node_modules
+.next
+dist
+.git
+database.sqlite
+sii-chrome-extension/icon.png
+*.xlsm
+*.sqlite

@@ -107,32 +107,49 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSyncSend.disabled = false;
       switchTab('sync');
 
-      // Send message to content script
-      chrome.tabs.sendMessage(tab.id, { action: 'scrape' }, (response) => {
-        // Check for errors (e.g. extension not loaded in iframe or visualizer not active)
-        if (chrome.runtime.lastError || !response || !response.data) {
-          showSyncStatus('No se detectaron datos automáticos. Puedes ingresarlos manualmente o refrescar la página del SII.', 'error');
+      // Try to load from chrome.storage.local first (handles iframe scraping perfectly)
+      chrome.storage.local.get(['lastScrapedBhe'], (result) => {
+        const cached = result.lastScrapedBhe;
+        // Verify BHE data exists and is relatively recent (within 15 minutes)
+        if (cached && (Date.now() - cached.timestamp < 15 * 60 * 1000)) {
+          prefillForm(cached);
+          showSyncStatus('Datos de boleta detectados con éxito.', 'success');
           return;
         }
 
-        const data = response.data;
-        
-        // Prefill inputs
-        if (data.boleta) syncBoletaInput.value = data.boleta;
-        if (data.rut_emisor) syncRutInput.value = data.rut_emisor;
-        if (data.nombre_emisor) syncNombreInput.value = data.nombre_emisor;
-        if (data.fecha) syncFechaInput.value = data.fecha;
-        if (data.monto) syncMontoInput.value = data.monto;
-        
-        if (data.fecha) {
-          syncDetalleInput.value = data.detalle || `Honorarios mes de ${getMesName(data.fecha)} 2026`;
-        } else {
-          syncDetalleInput.value = data.detalle || '';
-        }
+        // Fallback: Send message to content script (e.g. if storage is empty/expired)
+        chrome.tabs.sendMessage(tab.id, { action: 'scrape' }, (response) => {
+          // Check for errors (e.g. extension not loaded in iframe or visualizer not active)
+          if (chrome.runtime.lastError || !response || !response.data) {
+            showSyncStatus('No se detectaron datos automáticos. Puedes ingresarlos manualmente o refrescar la página del SII.', 'error');
+            return;
+          }
 
-        showSyncStatus('Datos de boleta detectados con éxito.', 'success');
+          prefillForm(response.data);
+          showSyncStatus('Datos de boleta detectados con éxito.', 'success');
+        });
       });
     });
+  }
+
+  function prefillForm(data) {
+    // If boleta number is missing or contains draft placeholders, leave it blank for manual/validation input
+    if (data.boleta && !data.boleta.includes('.')) {
+      syncBoletaInput.value = data.boleta;
+    } else {
+      syncBoletaInput.value = '';
+    }
+    
+    if (data.rut_emisor) syncRutInput.value = data.rut_emisor;
+    if (data.nombre_emisor) syncNombreInput.value = data.nombre_emisor;
+    if (data.fecha) syncFechaInput.value = data.fecha;
+    if (data.monto) syncMontoInput.value = data.monto;
+    
+    if (data.fecha) {
+      syncDetalleInput.value = data.detalle || `Honorarios mes de ${getMesName(data.fecha)} 2026`;
+    } else {
+      syncDetalleInput.value = data.detalle || '';
+    }
   }
 
   // Send Boleta to Server

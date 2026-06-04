@@ -1,26 +1,54 @@
 // Content script for FNR SII Integration
 
 (function() {
-  // Check if we are in a BHE page or document
-  const bodyText = document.body.innerText || '';
-  const isBhe = bodyText.includes('Boleta') || 
-                bodyText.includes('BOLETA') ||
-                bodyText.includes('Honorarios') ||
-                bodyText.includes('HONORARIOS') ||
-                window.location.href.includes('BHE_Visualizador') ||
-                window.location.href.includes('ctor_boletas') ||
-                window.location.href.includes('BHE') ||
-                window.location.href.includes('bhe');
+  // Check if BHE keywords are present in URL or body
+  const checkBhe = () => {
+    const bodyText = document.body.innerText || '';
+    return bodyText.includes('Boleta') || 
+           bodyText.includes('BOLETA') ||
+           bodyText.includes('Honorarios') ||
+           bodyText.includes('HONORARIOS') ||
+           window.location.href.includes('BHE_Visualizador') ||
+           window.location.href.includes('ctor_boletas') ||
+           window.location.href.includes('BHE') ||
+           window.location.href.includes('bhe');
+  };
 
-  if (!isBhe) return;
+  if (!checkBhe()) return;
 
   console.log('FNR Extension: Boleta de Honorarios page detected.');
 
-  // Scrape text to extract details
-  const parsedData = scrapeBheData(bodyText);
+  let debounceTimer;
+  function performScrape() {
+    const bodyText = document.body.innerText || '';
+    const parsedData = scrapeBheData(bodyText);
 
-  // Ingest floating button in the page
-  injectFloatingButton(parsedData);
+    // Save to local storage for the popup (bypasses frame messaging limitations)
+    if (parsedData.rut_emisor || parsedData.monto) {
+      window.lastScrapedBheData = parsedData;
+      chrome.storage.local.set({ 
+        lastScrapedBhe: {
+          ...parsedData,
+          timestamp: Date.now(),
+          url: window.location.href
+        } 
+      }, () => {
+        console.log('FNR Extension: Scraped and saved BHE data to storage.', parsedData);
+      });
+      // Inject floating button if it doesn't exist
+      injectFloatingButton();
+    }
+  }
+
+  // Run scraping immediately
+  performScrape();
+
+  // Also listen for DOM modifications (for async content loading)
+  const observer = new MutationObserver(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(performScrape, 500);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 })();
 
 // Listen for messages from the popup (fallback trigger)
@@ -148,10 +176,23 @@ function scrapeBheData(text) {
 
     // 7. Extract Glosa (Description)
     // Matches "Por concepto de:", "Por atención profesional:", or "Glosa:"
-    const conceptMatch = text.match(/Por\s*(?:concepto\s*de|atenci[oó]n\s*profesional)\s*:\s*(.*)/i) || 
-                         text.match(/Glosa\s*:\s*(.*)/i);
-    if (conceptMatch && conceptMatch[1]) {
-      data.detalle = conceptMatch[1].trim().split('\n')[0].substring(0, 80);
+    const conceptRegex = /Por\s*(?:concepto\s*de|atenci[oó]n\s*profesional)\s*:/i;
+    const glosaRegex = /Glosa\s*:/i;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (conceptRegex.test(line) || glosaRegex.test(line)) {
+        const colonIdx = line.indexOf(':');
+        const afterColon = line.substring(colonIdx + 1).trim();
+        if (afterColon.length > 0) {
+          data.detalle = afterColon.substring(0, 80);
+        } else if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          if (nextLine.length > 0 && !nextLine.includes('Total') && !nextLine.includes('Honorarios') && !nextLine.includes('Impto')) {
+            data.detalle = nextLine.substring(0, 80);
+          }
+        }
+        break;
+      }
     }
   } catch (e) {
     console.error('FNR Extension: Error scraping BHE data', e);
@@ -161,7 +202,7 @@ function scrapeBheData(text) {
 }
 
 // Injects a floating action button on the SII page
-function injectFloatingButton(data) {
+function injectFloatingButton() {
   // Check if button already exists
   if (document.getElementById('fnr-sync-btn')) return;
 
@@ -207,7 +248,7 @@ function injectFloatingButton(data) {
   });
 
   btn.addEventListener('click', () => {
-    showSyncModal(data);
+    showSyncModal(window.lastScrapedBheData || {});
   });
 
   document.body.appendChild(btn);

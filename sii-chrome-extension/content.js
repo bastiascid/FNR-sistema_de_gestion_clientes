@@ -53,27 +53,51 @@ function scrapeBheData(text) {
     const boletaMatch = text.match(/N[°o]\s*[:\.]?\s*(\d+)/i) || 
                         text.match(/N[úu]mero\s*[:\.]?\s*(\d+)/i) ||
                         text.match(/Boleta\s*N[°o]\s*(\d+)/i);
-    if (boletaMatch) {
+    if (boletaMatch && boletaMatch[1]) {
       data.boleta = boletaMatch[1];
     }
 
     // 3. Extract RUTs in page
-    // Chilean RUT regex
-    const rutRegex = /(\d{1,2}\.\d{3}\.\d{3}-[\dkK]|\d{7,8}-[\dkK])/g;
+    const rutRegex = /(\d{1,2}\.\d{3}\.\d{3}-[\dkK]|\d{7,8}-[\dkK]|\d{7,8}[\dkK])/g;
     const ruts = text.match(rutRegex);
     if (ruts && ruts.length > 0) {
-      // The first RUT is typically the Emisor (the professional)
+      // Clean RUT format
       data.rut_emisor = ruts[0];
     }
 
     // 4. Extract Emisor Name
-    // Usually the name is in the first few lines of the text, before the first RUT
+    // Search for the closest line above the first RUT that contains a clean uppercase name
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    if (lines.length > 0) {
-      // Find the line that looks like the professional's name (capitalized, no numbers, first 3 lines)
-      for (let i = 0; i < Math.min(5, lines.length); i++) {
+    if (ruts && ruts.length > 0) {
+      const firstRut = ruts[0];
+      // Find the index of the line containing the first RUT
+      const rutLineIndex = lines.findIndex(l => l.includes(firstRut));
+      if (rutLineIndex !== -1) {
+        // Look up to 4 lines before the RUT
+        for (let i = rutLineIndex - 1; i >= Math.max(0, rutLineIndex - 4); i--) {
+          const line = lines[i];
+          // Emitter name must be uppercase, only contain letters, spaces, and no numbers
+          if (line.toUpperCase() === line && 
+              line.length > 5 &&
+              !line.includes('RUT') && 
+              !line.includes('R.U.T') && 
+              !line.includes('BOLETA') && 
+              !line.includes('ELECTRONICA') &&
+              /[A-Z]/.test(line) &&
+              !/\d/.test(line)) {
+            data.nombre_emisor = line;
+            break;
+          }
+        }
+      }
+    }
+
+    // Fallback name search (first few lines) if the above search fails
+    if (!data.nombre_emisor && lines.length > 0) {
+      for (let i = 0; i < Math.min(10, lines.length); i++) {
         const line = lines[i];
         if (line.toUpperCase() === line && 
+            line.length > 5 &&
             !line.includes('RUT') && 
             !line.includes('R.U.T') && 
             !line.includes('BOLETA') && 
@@ -87,7 +111,6 @@ function scrapeBheData(text) {
     }
 
     // 5. Extract Date
-    // Format: "19 de Febrero de 2026"
     const months = {
       'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04', 'mayo': '05', 'junio': '06',
       'julio': '07', 'agosto': '08', 'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
@@ -101,7 +124,6 @@ function scrapeBheData(text) {
       const year = dateMatch[3];
       data.fecha = `${year}-${month}-${day}`;
     } else {
-      // Fallback: search for YYYY-MM-DD or DD/MM/YYYY
       const isoMatch = cleanText.match(/(\d{4})-(\d{2})-(\d{2})/);
       if (isoMatch) {
         data.fecha = isoMatch[0];
@@ -110,7 +132,6 @@ function scrapeBheData(text) {
         if (simpleMatch) {
           data.fecha = `${simpleMatch[3]}-${simpleMatch[2]}-${simpleMatch[1]}`;
         } else {
-          // Default to current date in Chile YYYY-MM-DD
           const today = new Date();
           data.fecha = today.toISOString().split('T')[0];
         }
@@ -118,23 +139,18 @@ function scrapeBheData(text) {
     }
 
     // 6. Extract Total Gross Value (Monto)
-    // Looks for "Total Honorarios: $ 75.000" or similar
-    const totalMatch = cleanText.match(/Total\s*(?:Honorarios?)?\s*[:\.]?\s*\$\s*([0-9\.]+)/i) || 
-                       cleanText.match(/Total\s*Bruto\s*[:\.]?\s*\$\s*([0-9\.]+)/i) ||
-                       cleanText.match(/Total\s*:\s*\$\s*([0-9\.]+)/i) ||
-                       cleanText.match(/Monto\s*Total\s*[:\.]?\s*\$\s*([0-9\.]+)/i);
-    if (totalMatch) {
-      // Remove thousands separators to make it a clean number
+    // Matches "Total Honorarios $:" or similar, even with linebreaks, spaces, and colons
+    const totalMatch = cleanText.match(/Total\s*(?:Honorarios?|Bruto)?\s*(?:\$|:)?\s*([0-9\.]+)/i) ||
+                       cleanText.match(/Monto\s*Total\s*(?:\$|:)?\s*([0-9\.]+)/i);
+    if (totalMatch && totalMatch[1]) {
       data.monto = totalMatch[1].replace(/\./g, '');
     }
 
     // 7. Extract Glosa (Description)
-    // Looks for "Por concepto de: ..." or "Atención: ..."
-    const conceptMatch = text.match(/Por\s*concepto\s*de\s*:\s*(.*)/i) || 
-                         text.match(/Atenci[oó]n\s*:\s*(.*)/i) ||
+    // Matches "Por concepto de:", "Por atención profesional:", or "Glosa:"
+    const conceptMatch = text.match(/Por\s*(?:concepto\s*de|atenci[oó]n\s*profesional)\s*:\s*(.*)/i) || 
                          text.match(/Glosa\s*:\s*(.*)/i);
-    if (conceptMatch) {
-      // Get the concept, limit to 60 characters for DB compatibility
+    if (conceptMatch && conceptMatch[1]) {
       data.detalle = conceptMatch[1].trim().split('\n')[0].substring(0, 80);
     }
   } catch (e) {

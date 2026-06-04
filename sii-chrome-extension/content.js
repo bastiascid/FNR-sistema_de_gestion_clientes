@@ -14,12 +14,12 @@
            window.location.href.includes('bhe');
   };
 
-  if (!checkBhe()) return;
-
-  console.log('FNR Extension: Boleta de Honorarios page detected.');
+  console.log('FNR Extension: Content script initialized.');
 
   let debounceTimer;
   function performScrape() {
+    if (!checkBhe()) return;
+
     const bodyText = document.body.innerText || '';
     const parsedData = scrapeBheData(bodyText);
 

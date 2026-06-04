@@ -108,8 +108,18 @@ document.addEventListener('DOMContentLoaded', () => {
       switchTab('sync');
 
       // Try to load from chrome.storage.local first (handles iframe scraping perfectly)
-      chrome.storage.local.get(['lastScrapedBhe'], (result) => {
+      chrome.storage.local.get(['lastScrapedBhe', 'popupDraft'], (result) => {
         const cached = result.lastScrapedBhe;
+        const draft = result.popupDraft;
+
+        // If the user has a manually saved draft that is newer than the scraped BHE,
+        // and is recent (within 30 minutes), load the draft!
+        if (draft && (!cached || draft.timestamp > cached.timestamp) && (Date.now() - draft.timestamp < 30 * 60 * 1000)) {
+          restoreForm(draft);
+          showSyncStatus('Borrador restaurado de la sesión anterior.', 'success');
+          return;
+        }
+
         // Verify BHE data exists and is relatively recent (within 15 minutes)
         if (cached && (Date.now() - cached.timestamp < 15 * 60 * 1000)) {
           prefillForm(cached);
@@ -152,6 +162,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function restoreForm(data) {
+    if (data.boleta) syncBoletaInput.value = data.boleta;
+    if (data.rut_emisor) syncRutInput.value = data.rut_emisor;
+    if (data.nombre_emisor) syncNombreInput.value = data.nombre_emisor;
+    if (data.fecha) syncFechaInput.value = data.fecha;
+    if (data.monto) syncMontoInput.value = data.monto;
+    if (data.detalle) syncDetalleInput.value = data.detalle;
+  }
+
+  // Save inputs to chrome.storage.local on input/change
+  function savePopupDraft() {
+    const draft = {
+      boleta: syncBoletaInput.value.trim(),
+      rut_emisor: syncRutInput.value.trim(),
+      nombre_emisor: syncNombreInput.value.trim(),
+      fecha: syncFechaInput.value.trim(),
+      monto: syncMontoInput.value.trim(),
+      detalle: syncDetalleInput.value.trim(),
+      timestamp: Date.now()
+    };
+    chrome.storage.local.set({ popupDraft: draft });
+  }
+
+  // Setup listeners to persist changes and avoid data loss when clicking outside the popup
+  [syncBoletaInput, syncRutInput, syncNombreInput, syncFechaInput, syncMontoInput, syncDetalleInput].forEach(input => {
+    input.addEventListener('input', savePopupDraft);
+    input.addEventListener('change', savePopupDraft);
+  });
+
   // Send Boleta to Server
   btnSyncSend.addEventListener('click', () => {
     const payload = {
@@ -190,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSyncSend.disabled = false;
       if (res.ok) {
         showSyncStatus('¡Boleta registrada exitosamente!', 'success');
+        chrome.storage.local.remove('popupDraft'); // Clear draft on success
         setTimeout(() => {
           window.close();
         }, 1500);

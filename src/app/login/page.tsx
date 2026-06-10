@@ -18,9 +18,12 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg(null);
 
+    // Map the username "admin" to its email equivalent in Supabase Auth
+    const loginEmail = email.trim().toLowerCase() === 'admin' ? 'admin@fnr.cl' : email.trim();
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password,
       });
 
@@ -69,17 +72,19 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Email field */}
+            {/* Email/Username field */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Correo Electrónico
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Usuario o Correo
+                </label>
+              </div>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="ejemplo@clubdeleones.cl"
+                  placeholder="admin o ejemplo@clubdeleones.cl"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-800 focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/10 rounded-2xl text-white placeholder-slate-600 outline-none transition-all duration-200"

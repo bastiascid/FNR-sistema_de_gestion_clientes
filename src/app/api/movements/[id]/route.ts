@@ -8,7 +8,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { fecha, detalle, banco, boleta, credito, abono } = body;
+    const { fecha, detalle, banco, boleta, credito, abono, registrado, pagado, fecha_registrado, fecha_pagado } = body;
 
     if (!fecha || !detalle) {
       return NextResponse.json(
@@ -26,7 +26,11 @@ export async function PUT(
         banco: banco || null,
         boleta: boleta || null,
         credito: Number(credito || 0),
-        abono: Number(abono || 0)
+        abono: Number(abono || 0),
+        registrado: registrado ?? false,
+        pagado: pagado ?? false,
+        fecha_registrado: fecha_registrado || null,
+        fecha_pagado: fecha_pagado || null
       })
       .eq('id', id)
       .select('*, clientes (nombre)')

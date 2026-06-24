@@ -18,5 +18,9 @@ export type Movement = {
   boleta: string | null;
   credito: number;
   abono: number;
+  registrado?: boolean;
+  pagado?: boolean;
+  fecha_registrado?: string | null;
+  fecha_pagado?: string | null;
   created_at: string;
 };

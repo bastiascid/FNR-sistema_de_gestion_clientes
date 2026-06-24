@@ -215,7 +215,11 @@ export async function POST(request: Request) {
         detalle: finalDetalle,
         boleta: parsedBoleta,
         credito: cleanedMonto,
-        abono: 0
+        abono: 0,
+        registrado: true,
+        pagado: false,
+        fecha_registrado: new Date().toISOString().split('T')[0],
+        fecha_pagado: null
       })
       .select()
       .single();

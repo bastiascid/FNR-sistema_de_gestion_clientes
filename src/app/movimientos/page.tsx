@@ -105,8 +105,80 @@ export default function MovementsLog() {
   const totalPaid = movements.reduce((acc, m) => acc + m.abono, 0);
   const netBalance = totalBilled - totalPaid;
 
+  const handleToggleStatus = async (mv: Movement, field: 'registrado' | 'pagado', value: boolean) => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const updated = {
+        fecha: mv.fecha,
+        detalle: mv.detalle,
+        banco: mv.banco,
+        boleta: mv.boleta,
+        credito: mv.credito,
+        abono: mv.abono,
+        registrado: field === 'registrado' ? value : !!mv.registrado,
+        pagado: field === 'pagado' ? value : !!mv.pagado,
+        fecha_registrado: field === 'registrado' 
+          ? (value ? (mv.fecha_registrado || todayStr) : null) 
+          : (mv.registrado ? (mv.fecha_registrado || null) : null),
+        fecha_pagado: field === 'pagado' 
+          ? (value ? (mv.fecha_pagado || todayStr) : null) 
+          : (mv.pagado ? (mv.fecha_pagado || null) : null)
+      };
+
+      const res = await fetch(`/api/movements/${mv.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+
+      if (res.ok) {
+        fetchMovements();
+      } else {
+        const errData = await res.json();
+        alert(`Error al actualizar estado: ${errData.error}`);
+      }
+    } catch (err) {
+      alert('Error de conexión al actualizar estado.');
+    }
+  };
+
+  const handleDateChange = async (mv: Movement, field: 'fecha_registrado' | 'fecha_pagado', value: string) => {
+    try {
+      const updated = {
+        fecha: mv.fecha,
+        detalle: mv.detalle,
+        banco: mv.banco,
+        boleta: mv.boleta,
+        credito: mv.credito,
+        abono: mv.abono,
+        registrado: !!mv.registrado,
+        pagado: !!mv.pagado,
+        fecha_registrado: field === 'fecha_registrado' ? (value || null) : (mv.fecha_registrado || null),
+        fecha_pagado: field === 'fecha_pagado' ? (value || null) : (mv.fecha_pagado || null)
+      };
+
+      const res = await fetch(`/api/movements/${mv.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+
+      if (res.ok) {
+        fetchMovements();
+      } else {
+        const errData = await res.json();
+        alert(`Error al actualizar fecha: ${errData.error}`);
+      }
+    } catch (err) {
+      alert('Error de conexión al actualizar fecha.');
+    }
+  };
+
   const handleExportCSV = () => {
-    const headers = ['Fecha', 'Cliente ID', 'Cliente', 'Detalle/Glosa', 'Banco', 'Boleta', 'Cargos (Debe)', 'Abonos (Haber)'];
+    const headers = [
+      'Fecha', 'Cliente ID', 'Cliente', 'Detalle/Glosa', 'Banco', 'Boleta', 
+      'Registrado', 'Fecha Registro', 'Pagado', 'Fecha Pago', 'Cargos (Debe)', 'Abonos (Haber)'
+    ];
     const rows = movements.map(m => [
       m.fecha,
       m.id_cliente,
@@ -114,6 +186,10 @@ export default function MovementsLog() {
       m.detalle,
       m.banco || '',
       m.boleta || '',
+      m.registrado ? 'Sí' : 'No',
+      m.fecha_registrado || '',
+      m.pagado ? 'Sí' : 'No',
+      m.fecha_pagado || '',
       m.credito,
       m.abono
     ]);
@@ -267,6 +343,8 @@ export default function MovementsLog() {
                   <th className="py-4 px-6">Detalle / Glosa</th>
                   <th className="py-4 px-6 w-24">Banco</th>
                   <th className="py-4 px-6 w-24">Boleta</th>
+                  <th className="py-4 px-6 text-center w-20">Reg.</th>
+                  <th className="py-4 px-6 text-center w-20">Pag.</th>
                   <th className="py-4 px-6 text-right w-36">Cargo (+)</th>
                   <th className="py-4 px-6 text-right w-36">Abono (-)</th>
                   <th className="py-4 px-6 text-center w-24">Acciones</th>
@@ -275,13 +353,13 @@ export default function MovementsLog() {
               <tbody className="divide-y divide-slate-100 text-sm">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400 font-medium">
+                    <td colSpan={10} className="py-8 text-center text-slate-400 font-medium">
                       Cargando registros...
                     </td>
                   </tr>
                 ) : movements.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400 font-medium">
+                    <td colSpan={10} className="py-8 text-center text-slate-400 font-medium">
                       No se registraron movimientos en el rango/filtros seleccionados.
                     </td>
                   </tr>
@@ -307,6 +385,48 @@ export default function MovementsLog() {
                       </td>
                       <td className="py-3 px-6 font-mono text-slate-500">
                         {m.boleta || '—'}
+                      </td>
+                      <td className="py-3 px-6 text-center">
+                        <div className="flex flex-col items-center">
+                          <input
+                            type="checkbox"
+                            checked={!!m.registrado}
+                            onChange={(e) => handleToggleStatus(m, 'registrado', e.target.checked)}
+                            className="h-4.5 w-4.5 rounded border-slate-300 text-indigo-650 accent-indigo-600 cursor-pointer print:hidden"
+                          />
+                          {m.registrado && (
+                            <input
+                              type="date"
+                              value={m.fecha_registrado ? m.fecha_registrado.split('T')[0] : ''}
+                              onChange={(e) => handleDateChange(m, 'fecha_registrado', e.target.value)}
+                              className="mt-1 text-[10px] text-slate-500 border border-slate-250 rounded px-1 py-0.5 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-[95px] text-center print:hidden"
+                            />
+                          )}
+                          <span className="hidden print:inline text-xs font-semibold text-slate-700">
+                            {m.registrado ? (m.fecha_registrado ? `Sí (${m.fecha_registrado.split('T')[0].split('-').reverse().join('/')})` : 'Sí') : 'No'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-6 text-center">
+                        <div className="flex flex-col items-center">
+                          <input
+                            type="checkbox"
+                            checked={!!m.pagado}
+                            onChange={(e) => handleToggleStatus(m, 'pagado', e.target.checked)}
+                            className="h-4.5 w-4.5 rounded border-slate-300 text-emerald-650 accent-emerald-600 cursor-pointer print:hidden"
+                          />
+                          {m.pagado && (
+                            <input
+                              type="date"
+                              value={m.fecha_pagado ? m.fecha_pagado.split('T')[0] : ''}
+                              onChange={(e) => handleDateChange(m, 'fecha_pagado', e.target.value)}
+                              className="mt-1 text-[10px] text-slate-500 border border-slate-250 rounded px-1 py-0.5 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-[95px] text-center print:hidden"
+                            />
+                          )}
+                          <span className="hidden print:inline text-xs font-semibold text-slate-700">
+                            {m.pagado ? (m.fecha_pagado ? `Sí (${m.fecha_pagado.split('T')[0].split('-').reverse().join('/')})` : 'Sí') : 'No'}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-3 px-6 text-right font-semibold text-slate-700">
                         {m.credito > 0 ? `$${m.credito.toLocaleString('es-CL')}` : '—'}
@@ -340,7 +460,7 @@ export default function MovementsLog() {
               {/* Table footer with filtered sums */}
               <tfoot className="border-t-2 border-slate-200 bg-slate-50/50 font-bold text-slate-700">
                 <tr>
-                  <td colSpan={5} className="py-4 px-6 text-right">TOTAL FILTRADO:</td>
+                  <td colSpan={7} className="py-4 px-6 text-right">TOTAL FILTRADO:</td>
                   <td className="py-4 px-6 text-right text-slate-800">
                     ${totalBilled.toLocaleString('es-CL')}
                   </td>

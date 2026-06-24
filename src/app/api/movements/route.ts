@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id_cliente, fecha, detalle, banco, boleta, credito, abono } = body;
+    const { id_cliente, fecha, detalle, banco, boleta, credito, abono, registrado, pagado, fecha_registrado, fecha_pagado } = body;
 
     if (!id_cliente || !fecha || !detalle) {
       return NextResponse.json(
@@ -76,7 +76,11 @@ export async function POST(request: Request) {
         banco: banco || null,
         boleta: boleta || null,
         credito: Number(credito || 0),
-        abono: Number(abono || 0)
+        abono: Number(abono || 0),
+        registrado: registrado ?? false,
+        pagado: pagado ?? false,
+        fecha_registrado: fecha_registrado || null,
+        fecha_pagado: fecha_pagado || null
       })
       .select('*, clientes (nombre)')
       .single();

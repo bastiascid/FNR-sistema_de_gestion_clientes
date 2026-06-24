@@ -196,7 +196,7 @@ export default function SiiPage() {
                     3
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-700 text-sm">Activa el "Modo de desarrollador"</h3>
+                    <h3 className="font-bold text-slate-700 text-sm">Activa el &quot;Modo de desarrollador&quot;</h3>
                     <p className="text-xs text-slate-400 mt-0.5">
                       En la esquina superior derecha, activa el interruptor que dice <span className="font-semibold text-slate-600">Modo de desarrollador</span>.
                     </p>
@@ -222,7 +222,7 @@ export default function SiiPage() {
                   <div>
                     <h3 className="font-bold text-slate-700 text-sm">Configura la extensión</h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Haz clic en el ícono del rompecabezas en tu barra del navegador, selecciona <span className="font-semibold text-slate-600">FNR SII Integration</span> e ingresa las credenciales de enlace mostradas en esta pantalla. Haz clic en "Guardar configuración".
+                      Haz clic en el ícono del rompecabezas en tu barra del navegador, selecciona <span className="font-semibold text-slate-600">FNR SII Integration</span> e ingresa las credenciales de enlace mostradas en esta pantalla. Haz clic en &quot;Guardar configuración&quot;.
                     </p>
                   </div>
                 </div>
@@ -234,7 +234,7 @@ export default function SiiPage() {
                   <div>
                     <h3 className="font-bold text-slate-700 text-sm">¡Listo para usar!</h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Abre el portal del SII. Cuando veas cualquier boleta electrónica de honorarios recibida, verás un botón flotante con el texto <span className="font-bold text-indigo-600">"Sincronizar con FNR"</span> en la esquina del documento para registrarlo automáticamente en un clic.
+                      Abre el portal del SII. Cuando veas cualquier boleta electrónica de honorarios recibida, verás un botón flotante con el texto <span className="font-bold text-indigo-600">&quot;Sincronizar con FNR&quot;</span> en la esquina del documento para registrarlo automáticamente en un clic.
                     </p>
                   </div>
                 </div>

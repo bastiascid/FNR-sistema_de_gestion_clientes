@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS movimientos (
   boleta TEXT,
   credito INTEGER DEFAULT 0,
   abono INTEGER DEFAULT 0,
+  registrado BOOLEAN DEFAULT false,
+  pagado BOOLEAN DEFAULT false,
+  fecha_registrado DATE,
+  fecha_pagado DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

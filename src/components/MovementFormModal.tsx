@@ -27,7 +27,11 @@ export default function MovementFormModal({
     banco: '',
     boleta: '',
     tipo: 'credito', // 'credito' (Cargo) or 'abono' (Pago)
-    monto: ''
+    monto: '',
+    registrado: false,
+    pagado: false,
+    fecha_registrado: '',
+    fecha_pagado: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -52,10 +56,14 @@ export default function MovementFormModal({
           banco: movement.banco || '',
           boleta: movement.boleta || '',
           tipo: movement.credito > 0 ? 'credito' : 'abono',
-          monto: String(movement.credito > 0 ? movement.credito : movement.abono)
+          monto: String(movement.credito > 0 ? movement.credito : movement.abono),
+          registrado: !!movement.registrado,
+          pagado: !!movement.pagado,
+          fecha_registrado: movement.fecha_registrado ? movement.fecha_registrado.split('T')[0] : '',
+          fecha_pagado: movement.fecha_pagado ? movement.fecha_pagado.split('T')[0] : ''
         });
       } else {
-        // Create mode: pre-fill date with current date (2026-05-28)
+        // Create mode: pre-fill date with current date
         const defaultDate = new Date().toISOString().split('T')[0];
         setFormData({
           id_cliente: clientId ? String(clientId) : '',
@@ -64,7 +72,11 @@ export default function MovementFormModal({
           banco: '',
           boleta: '',
           tipo: 'credito',
-          monto: ''
+          monto: '',
+          registrado: false,
+          pagado: false,
+          fecha_registrado: '',
+          fecha_pagado: ''
         });
       }
       setError('');
@@ -77,7 +89,7 @@ export default function MovementFormModal({
     const { name, value } = e.target;
     
     // Auto-fill common descriptions for convenience
-    let updatedFormData = { ...formData, [name]: value };
+    const updatedFormData = { ...formData, [name]: value };
     if (name === 'tipo') {
       if (value === 'credito' && !formData.detalle) {
         updatedFormData.detalle = 'Honorarios mes ' + getMonthName();
@@ -129,7 +141,11 @@ export default function MovementFormModal({
       banco: formData.banco || null,
       boleta: formData.boleta || null,
       credito: tipo === 'credito' ? Number(monto) : 0,
-      abono: tipo === 'abono' ? Number(monto) : 0
+      abono: tipo === 'abono' ? Number(monto) : 0,
+      registrado: formData.registrado,
+      pagado: formData.pagado,
+      fecha_registrado: formData.registrado ? (formData.fecha_registrado || null) : null,
+      fecha_pagado: formData.pagado ? (formData.fecha_pagado || null) : null
     };
 
     try {
@@ -332,6 +348,84 @@ export default function MovementFormModal({
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
                   />
                 </div>
+              </div>
+              {/* Status fields: Registrado & Pagado */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      name="registrado"
+                      checked={formData.registrado}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData({
+                          ...formData,
+                          registrado: checked,
+                          fecha_registrado: checked ? (formData.fecha_registrado || new Date().toISOString().split('T')[0]) : ''
+                        });
+                      }}
+                      className="h-4.5 w-4.5 rounded border-slate-300 text-indigo-650 accent-indigo-600 cursor-pointer"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-slate-800">Registrado</span>
+                      <span className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">Sincronizado en FNR</span>
+                    </div>
+                  </label>
+ 
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      name="pagado"
+                      checked={formData.pagado}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData({
+                          ...formData,
+                          pagado: checked,
+                          fecha_pagado: checked ? (formData.fecha_pagado || new Date().toISOString().split('T')[0]) : ''
+                        });
+                      }}
+                      className="h-4.5 w-4.5 rounded border-slate-300 text-emerald-650 accent-emerald-600 cursor-pointer"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-slate-800">Pagado</span>
+                      <span className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">Dinero recaudado</span>
+                    </div>
+                  </label>
+                </div>
+ 
+                {/* Conditional date fields */}
+                {(formData.registrado || formData.pagado) && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200">
+                    <div>
+                      {formData.registrado && (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Fecha Registro</label>
+                          <input
+                            type="date"
+                            value={formData.fecha_registrado}
+                            onChange={(e) => setFormData({ ...formData, fecha_registrado: e.target.value })}
+                            className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      {formData.pagado && (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Fecha Pago</label>
+                          <input
+                            type="date"
+                            value={formData.fecha_pagado}
+                            onChange={(e) => setFormData({ ...formData, fecha_pagado: e.target.value })}
+                            className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

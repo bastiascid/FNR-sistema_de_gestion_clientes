@@ -162,7 +162,7 @@ export default function SiiPage() {
             <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
               <div className="flex items-center gap-2">
                 <HelpCircle className="h-5 w-5 text-indigo-600" />
-                <h2 className="font-bold text-slate-800 text-base">¿Cómo instalar y usar la extensión?</h2>
+                <h2 className="font-bold text-slate-800 text-base">¿Cómo instalar y usar el capturador (Tampermonkey)?</h2>
               </div>
 
               <div className="space-y-4">
@@ -172,9 +172,9 @@ export default function SiiPage() {
                     1
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-700 text-sm">Obtén la extensión</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      La extensión se encuentra en la carpeta `sii-chrome-extension` de tu proyecto. También puedes descargar la carpeta o comprimido directamente.
+                    <h3 className="font-bold text-slate-700 text-sm">Instala la extensión Tampermonkey</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Ve a la Chrome Web Store (o tu tienda de extensiones) y descarga <strong>Tampermonkey</strong>.
                     </p>
                   </div>
                 </div>
@@ -184,9 +184,9 @@ export default function SiiPage() {
                     2
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-700 text-sm">Abre las Extensiones de Chrome</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      En Google Chrome, navega a <code className="bg-slate-100 text-indigo-600 px-1 py-0.5 rounded font-mono select-all">chrome://extensions/</code> o abre el menú de Chrome &gt; Extensiones &gt; Gestionar Extensiones.
+                    <h3 className="font-bold text-slate-700 text-sm">Crea un Nuevo Script</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Haz clic en el ícono de Tampermonkey en tu barra y selecciona <strong>"Crear nuevo script..."</strong>.
                     </p>
                   </div>
                 </div>
@@ -195,46 +195,137 @@ export default function SiiPage() {
                   <div className="h-7 w-7 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center font-bold text-xs text-indigo-600 flex-shrink-0">
                     3
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-700 text-sm">Activa el &quot;Modo de desarrollador&quot;</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      En la esquina superior derecha, activa el interruptor que dice <span className="font-semibold text-slate-600">Modo de desarrollador</span>.
+                  <div className="w-full">
+                    <h3 className="font-bold text-slate-700 text-sm">Pega este código fuente</h3>
+                    <p className="text-xs text-slate-500 mt-0.5 mb-2">
+                      Borra todo el contenido por defecto, pega esto y presiona <strong>Archivo &gt; Guardar</strong> (o Ctrl+S).
                     </p>
-                  </div>
-                </div>
+                    <div className="relative bg-slate-900 rounded-lg p-4 overflow-x-auto text-xs text-slate-300 font-mono">
+                      <pre>
+{`// ==UserScript==
+// @name         Capturador de Boletas FNR
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Captura boletas del SII y las envía a FNR pidiendo confirmación
+// @match        https://*.sii.cl/*
+// @grant        none
+// ==/UserScript==
 
-                <div className="flex gap-4">
-                  <div className="h-7 w-7 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center font-bold text-xs text-indigo-600 flex-shrink-0">
-                    4
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-700 text-sm">Carga la carpeta</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Haz clic en el botón <span className="font-semibold text-slate-600">Cargar descomprimida</span> (Load unpacked) arriba a la izquierda. Selecciona la carpeta <code className="bg-slate-100 text-indigo-600 px-1 py-0.5 rounded font-mono">sii-chrome-extension</code> en los archivos de tu computador.
-                    </p>
-                  </div>
-                </div>
+(function() {
+    'use strict';
 
-                <div className="flex gap-4">
-                  <div className="h-7 w-7 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center font-bold text-xs text-indigo-600 flex-shrink-0">
-                    5
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-700 text-sm">Configura la extensión</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Haz clic en el ícono del rompecabezas en tu barra del navegador, selecciona <span className="font-semibold text-slate-600">FNR SII Integration</span> e ingresa las credenciales de enlace mostradas en esta pantalla. Haz clic en &quot;Guardar configuración&quot;.
-                    </p>
+    // CONFIGURACIÓN DE TU API
+    const API_URL = "${typeof window !== 'undefined' ? window.location.origin : 'https://fnr.bastiascid.cl'}/api/sii/boleta";
+    const API_KEY = "${config.apiKey}";
+
+    // Función de extracción (Prueba simulada inicial)
+    function extraerDatos() {
+        return {
+            boleta: "999",
+            rut_emisor: "12345678-9",
+            nombre_emisor: "Juan Pérez de Prueba",
+            monto: 50000,
+            fecha: new Date().toISOString().split('T')[0],
+            detalle: "Servicios profesionales"
+        };
+    }
+
+    function mostrarVentanaFNR(datos) {
+        if(document.getElementById('fnr-panel')) return;
+
+        const panel = document.createElement('div');
+        panel.id = 'fnr-panel';
+        panel.innerHTML = \`
+            <div style="position: fixed; bottom: 20px; right: 20px; width: 320px; background: white; border: 2px solid #000; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999999; font-family: sans-serif; overflow: hidden; color: #333;">
+                <div style="background: #4f46e5; color: white; padding: 10px; font-weight: bold; text-align: center;">
+                    Sincronizar con FNR
+                </div>
+                <div style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+                    <label style="font-size: 12px; color: #555;">N° Boleta</label>
+                    <input type="text" id="fnr-bol" value="\${datos.boleta}" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px; color: #000;">
+
+                    <label style="font-size: 12px; color: #555;">RUT Emisor</label>
+                    <input type="text" id="fnr-rut" value="\${datos.rut_emisor}" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px; color: #000;">
+
+                    <label style="font-size: 12px; color: #555;">Nombre Emisor</label>
+                    <input type="text" id="fnr-nombre" value="\${datos.nombre_emisor}" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px; color: #000;">
+
+                    <label style="font-size: 12px; color: #555;">Monto Bruto ($)</label>
+                    <input type="number" id="fnr-monto" value="\${datos.monto}" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px; color: #000;">
+                    
+                    <label style="font-size: 12px; color: #555;">Detalle</label>
+                    <input type="text" id="fnr-detalle" value="\${datos.detalle}" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px; color: #000;">
+
+                    <button id="fnr-enviar" style="margin-top: 10px; background: #16a34a; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        Confirmar y Enviar
+                    </button>
+                    <button id="fnr-cerrar" style="background: #dc2626; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        \`;
+        document.body.appendChild(panel);
+
+        document.getElementById('fnr-cerrar').onclick = () => panel.remove();
+        
+        document.getElementById('fnr-enviar').onclick = async () => {
+            const btn = document.getElementById('fnr-enviar');
+            btn.innerText = "Enviando...";
+            btn.disabled = true;
+
+            const payload = {
+                boleta: document.getElementById('fnr-bol').value,
+                rut_emisor: document.getElementById('fnr-rut').value,
+                nombre_emisor: document.getElementById('fnr-nombre').value,
+                monto: Number(document.getElementById('fnr-monto').value),
+                fecha: new Date().toISOString().split('T')[0],
+                detalle: document.getElementById('fnr-detalle').value
+            };
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-sii-extension-key': API_KEY },
+                    body: JSON.stringify(payload)
+                });
+                
+                if(res.ok) {
+                    alert('¡Boleta guardada en FNR exitosamente!');
+                    panel.remove();
+                } else {
+                    const data = await res.json();
+                    alert('Error al guardar: ' + (data.error || 'Desconocido'));
+                    btn.innerText = "Reintentar";
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert('Error de conexión con FNR.');
+                btn.innerText = "Reintentar";
+                btn.disabled = false;
+            }
+        };
+    }
+
+    setTimeout(() => {
+        const datosExtraidos = extraerDatos();
+        mostrarVentanaFNR(datosExtraidos);
+    }, 1500);
+
+})();`}
+                      </pre>
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <div className="h-7 w-7 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center font-bold text-xs text-emerald-600 flex-shrink-0">
-                    6
+                    4
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-700 text-sm">¡Listo para usar!</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Abre el portal del SII. Cuando veas cualquier boleta electrónica de honorarios recibida, verás un botón flotante con el texto <span className="font-bold text-indigo-600">&quot;Sincronizar con FNR&quot;</span> en la esquina del documento para registrarlo automáticamente en un clic.
+                    <h3 className="font-bold text-slate-700 text-sm">¡Pruébalo en el SII!</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Abre la página del SII. El recuadro aparecerá abajo a la derecha simulando una captura. 
                     </p>
                   </div>
                 </div>

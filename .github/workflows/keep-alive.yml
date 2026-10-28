@@ -1,0 +1,35 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Runs at 12:00 UTC every Monday, Wednesday, and Friday
+    # Prevents Supabase free tier from pausing after 7 days of inactivity
+    - cron: '0 12 * * 1,3,5'
+  workflow_dispatch: # Allows manual run anytime from GitHub Actions tab
+
+jobs:
+  ping:
+    name: Keep Supabase Awake
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          echo "Pinging Supabase database to prevent auto-pause..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_WYw-XrnYT_RQ5TcWOBsDCQ_CBvXI2Cm' }}" \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_WYw-XrnYT_RQ5TcWOBsDCQ_CBvXI2Cm' }}" \
+            "https://hpukxkmindpgoqknvtyj.supabase.co/rest/v1/clientes?select=id&limit=1")
+          
+          echo "Supabase HTTP response: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
+            echo "✅ Supabase is active and activity timer reset successfully."
+          else
+            echo "❌ Unexpected response from Supabase: $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Ping Production Domain
+        run: |
+          echo "Pinging production domain..."
+          WEB_CODE=$(curl -s -o /dev/null -w "%{http_code}" -L "https://fnr.bastiascid.cl")
+          echo "Web HTTP response: $WEB_CODE"

@@ -25,4 +25,7 @@ jobs:
       run: npm run lint
       
     - name: Build project
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://hpukxkmindpgoqknvtyj.supabase.co' }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_WYw-XrnYT_RQ5TcWOBsDCQ_CBvXI2Cm' }}
       run: npm run build

@@ -186,7 +186,7 @@ export default function SiiPage() {
                   <div>
                     <h3 className="font-bold text-slate-700 text-sm">Crea un Nuevo Script</h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Haz clic en el ícono de Tampermonkey en tu barra y selecciona <strong>"Crear nuevo script..."</strong>.
+                      Haz clic en el ícono de Tampermonkey en tu barra y selecciona <strong>&quot;Crear nuevo script...&quot;</strong>.
                     </p>
                   </div>
                 </div>

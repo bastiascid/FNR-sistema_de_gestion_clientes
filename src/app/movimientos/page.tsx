@@ -53,7 +53,7 @@ export default function MovementsLog() {
   const fetchMovements = async () => {
     setLoading(true);
     try {
-      let queryParams = [];
+      const queryParams = [];
       if (selectedClientId) queryParams.push(`clientId=${selectedClientId}`);
       if (startDate) queryParams.push(`startDate=${startDate}`);
       if (endDate) queryParams.push(`endDate=${endDate}`);
